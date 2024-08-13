@@ -9,7 +9,7 @@ from openpyxl.cell import Cell
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from models import Card, Transaction, Currency
+from finparse.cards.models import Card, Transaction, Currency
 
 title_pattern = re.compile(r"לכרטיס\s(.*?)\sהמסתיים.*(\d{4})$")
 currency_pattern = re.compile(r"\[\$(.*?)\]")
