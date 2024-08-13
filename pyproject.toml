@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "finparse"
+version = "0.1.0"
+description = ""
+authors = ["Michael Shustin <michaelshustin@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openpyxl = "^3.1.5"
+xlrd = "^2.0.1"
+requests = "^2.32.3"
+loguru = "^0.7.2"
+pick = "^2.3.2"
+firefly-iii-api-client = "^2.0.12.0"
+pydantic-settings = "^2.4.0"
+xattr = "^1.1.0"
+typer = "^0.12.3"
+pytest = "^8.3.2"
+
+[tool.poetry.group.dev.dependencies]
+black = {extras = ["d"], version = "^24.8.0"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
