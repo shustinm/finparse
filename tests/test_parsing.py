@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from cards.isracard import parse_workbook
+from finparse.cards.isracard import parse_workbook
 
 ISRACARD_EXPORT_FOLDER = Path(__file__).parent / "files" / "isracard"
 
 EXPORT_EXPECTED_TRANSACTIONS = {
-    ISRACARD_EXPORT_FOLDER / "Export_6_2024.xls": 20,
-    ISRACARD_EXPORT_FOLDER / "Export_7_2024.xls": 23,
-    ISRACARD_EXPORT_FOLDER / "Export_8_2024.xls": 18,
+    ISRACARD_EXPORT_FOLDER / "isracard1.xls": 20,
+    ISRACARD_EXPORT_FOLDER / "isracard2.xls": 23,
+    ISRACARD_EXPORT_FOLDER / "isracard3.xls": 18,
 }
 
 

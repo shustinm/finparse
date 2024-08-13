@@ -1,5 +1,4 @@
-from datetime import date
-from decimal import Decimal
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -12,14 +11,14 @@ class Currency(Enum):
 
 
 class Transaction(BaseModel):
-    date: date
+    date: datetime
     business: str
     amount: str
     currency: Currency
     foreign_amount: str | None = None
     foreign_currency: Currency | None = None
     id: int | None = None
-    notes: str = ""
+    notes: str | None = None
 
     def __str__(self):
         return f"{self.amount}{self.currency.value} -> {self.business} ({self.date})"

@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from cards.models import Transaction, Card
+from finparse.cards.models import Transaction, Card
 
 from loguru import logger
 import xlrd
@@ -46,7 +46,7 @@ def parse_local_transactions(
 
         transactions.append(
             Transaction(
-                date=datetime.strptime(_date, "%d/%m/%Y").date(),
+                date=datetime.strptime(_date, "%d/%m/%Y"),
                 business=business,
                 amount=str(amount),
                 currency=currency,
@@ -78,7 +78,7 @@ def parse_foreign_transactions(sheet: Sheet, start_row: int):
 
         transactions.append(
             Transaction(
-                date=datetime.strptime(_date, "%d/%m/%Y").date(),
+                date=datetime.strptime(_date, "%d/%m/%Y"),
                 business=business,
                 amount=str(amount),
                 currency=currency,
