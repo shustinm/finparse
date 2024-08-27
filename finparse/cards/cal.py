@@ -1,6 +1,5 @@
-from pprint import pformat
+from typing import Iterable
 
-from loguru import logger
 import re
 from pathlib import Path
 
@@ -9,7 +8,7 @@ from openpyxl.cell import Cell
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from finparse.cards.models import Card, Transaction, Currency
+from finparse.models import Card, Transaction, Currency
 
 title_pattern = re.compile(r"לכרטיס\s(.*?)\sהמסתיים.*(\d{4})$")
 currency_pattern = re.compile(r"\[\$(.*?)\]")
@@ -20,7 +19,7 @@ def get_currency(number_formatting: str) -> Currency:
     return Currency(match.group(1))
 
 
-def parse_workbook(workbook_path: Path) -> list[Card]:
+def parse_workbook(workbook_path: Path) -> Iterable[Card]:
     workbook: Workbook = openpyxl.load_workbook(
         workbook_path, read_only=True, data_only=True, keep_links=False
     )
@@ -47,7 +46,7 @@ def parse_workbook(workbook_path: Path) -> list[Card]:
         if not row[0].value:
             break
 
-        date, description, foreign_cost, local_cost, _, _, notes = row
+        date, description, foreign_cost, local_cost, category, _, notes = row
         amount = str(local_cost.value)
         currency = get_currency(local_cost.number_format)
         foreign_amount = str(foreign_cost.value)
@@ -56,25 +55,15 @@ def parse_workbook(workbook_path: Path) -> list[Card]:
         card.transactions.append(
             Transaction(
                 date=date.value,
-                business=description.value,
+                description=description.value,
                 amount=amount,
                 currency=currency,
                 foreign_amount=foreign_amount,
                 foreign_currency=foreign_currency,
+                category=category.value,
                 notes=notes.value,
             )
         )
         row_idx += 1
 
-    return [card]
-
-
-if __name__ == "__main__":
-    from finparse.log import configure_log
-
-    configure_log(True)
-    cards = parse_workbook(
-        Path(__file__).parent.parent.parent / "tests" / "files" / "cal" / "cal1.xlsx"
-    )
-    for card in cards:
-        logger.info(pformat(card.transactions))
+    yield card

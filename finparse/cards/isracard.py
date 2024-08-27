@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from finparse.cards.models import Transaction, Card
+from finparse.models import Transaction, Card
 
 from loguru import logger
 import xlrd
@@ -47,7 +47,7 @@ def parse_local_transactions(
         transactions.append(
             Transaction(
                 date=datetime.strptime(_date, "%d/%m/%Y"),
-                business=business,
+                description=business,
                 amount=str(amount),
                 currency=currency,
                 foreign_amount=str(debit_amount),
@@ -79,7 +79,7 @@ def parse_foreign_transactions(sheet: Sheet, start_row: int):
         transactions.append(
             Transaction(
                 date=datetime.strptime(_date, "%d/%m/%Y"),
-                business=business,
+                description=business,
                 amount=str(amount),
                 currency=currency,
                 foreign_amount=str(foreign_amount),
@@ -119,10 +119,9 @@ def parse_card(sheet: Sheet, starting_idx: int) -> tuple[Card, int]:
     return card, row
 
 
-def parse_workbook(workbook_path: Path) -> list[Card]:
+def parse_workbook(workbook_path: Path) -> Iterable[Card]:
     book: Book = xlrd.open_workbook(workbook_path)
     sh: Sheet = book.sheet_by_index(0)
-    cards: list[Card] = []
 
     # Skip first row which is empty
     curr_row = 1
@@ -136,9 +135,7 @@ def parse_workbook(workbook_path: Path) -> list[Card]:
         if (first := sh.cell_value(curr_row, 0)) and " - " in first:
             logger.info(f"Parsing card (row {curr_row}) for: {first}")
             card, curr_row = parse_card(sh, curr_row)
-            cards.append(card)
+            yield card
             logger.debug(f"Ended at ({curr_row}, 0): {sh.cell_value(curr_row, 0)}")
 
         curr_row += 1
-
-    return cards

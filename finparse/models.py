@@ -1,7 +1,9 @@
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Callable, Iterable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class Currency(Enum):
@@ -12,16 +14,17 @@ class Currency(Enum):
 
 class Transaction(BaseModel):
     date: datetime
-    business: str
+    description: str
     amount: str
     currency: Currency
     foreign_amount: str | None = None
     foreign_currency: Currency | None = None
+    category: str | None = None
     id: int | None = None
     notes: str | None = None
 
     def __str__(self):
-        return f"{self.amount}{self.currency.value} -> {self.business} ({self.date})"
+        return f"{self.amount}{self.currency.value} -> {self.description} ({self.date})"
 
 
 def str_transactions(transactions: list[Transaction]) -> str:
@@ -46,3 +49,6 @@ class Card(BaseModel):
             f"{self.description}\n"
             f"transactions: {str_transactions(self.transactions)}\n"
         )
+
+
+type CardExportParser = Callable[[Path], Iterable[Card]]
