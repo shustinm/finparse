@@ -92,6 +92,7 @@ class Categories:
                 rule_category = rule.attributes.actions[0].value
                 self[rule_category].add_rule(category_rule_type, rule)
 
+        logger.info(f"Creating rule groups: {required_rule_groups}")
         for rg in required_rule_groups:
             self.rule_groups_api.store_rule_group(
                 RuleGroupStore(

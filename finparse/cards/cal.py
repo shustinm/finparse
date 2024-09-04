@@ -46,7 +46,7 @@ def parse_workbook(workbook_path: Path) -> Iterable[Card]:
         if not row[0].value:
             break
 
-        date, description, foreign_cost, local_cost, category, _, notes = row
+        date, description, foreign_cost, local_cost, _, category, notes = row
         amount = str(local_cost.value)
         currency = get_currency(local_cost.number_format)
         foreign_amount = str(foreign_cost.value)

@@ -1,12 +1,10 @@
 import inspect
 from datetime import datetime
 from pathlib import Path
-from pprint import pformat
 
 from firefly_iii_client import (
     TransactionSplitStore,
     TransactionTypeProperty,
-    TransactionsApi,
     AccountTypeFilter,
     TransactionStore,
 )
@@ -52,22 +50,29 @@ def find_parser(path: Path) -> CardExportParser:
 
 
 @app.callback()
-def setup(
-    verbose: bool = typer.Option(False),
-):
+def setup(verbose: bool = typer.Option(False)):
     configure_log(verbose)
 
 
-def upload_transaction(transaction: Transaction, firefly: Firefly, account_id: str):
+def generate_notes_str(**notes) -> str:
+    return ";\n".join(f"{k}: {v}" for k, v in notes.items())
+
+
+def upload_transaction(
+    transaction: Transaction, card: Card, firefly: Firefly, account_id: str
+):
     transaction_store = TransactionSplitStore(
         amount=transaction.amount,
         var_date=datetime.combine(transaction.date, datetime.min.time()),
         description=transaction.description,
         currency_code=transaction.currency.name,
+        external_id=transaction.id,
         foreign_amount=transaction.foreign_amount,
         foreign_currency_code=transaction.foreign_currency.name,
         source_id=account_id,
         type=TransactionTypeProperty.WITHDRAWAL,
+        notes=generate_notes_str(**transaction.firefly_notes),
+        tags=[card.description],
     )
 
     firefly.transactions_api.store_transaction(
@@ -78,7 +83,7 @@ def upload_transaction(transaction: Transaction, firefly: Firefly, account_id: s
 def upload_card(card: Card, firefly: Firefly, account_id: str):
     for transaction in card.transactions:
         logger.info(f"Transaction: {transaction}")
-        upload_transaction(transaction, firefly, account_id)
+        upload_transaction(transaction, card, firefly, account_id)
 
 
 @app.command()
@@ -102,21 +107,22 @@ def upload(
     accounts = firefly.accounts_api.list_account(type=AccountTypeFilter.ASSET).data
     logger.info(f"Detected {len(accounts)} asset accounts")
 
-    # acc_name, acc_idx = pick(
-    #     [acc.attributes.name for acc in accounts], title="Select Account"
-    # )
-    #
-    # logger.success(f"Selected account: {acc_name}")
-    #
-    # for card in filter(lambda c: c.enabled, cards):
-    #     if card.transactions:
-    #         logger.info(f"Uploading transactions for {card.description}")
-    #         upload_card(card, firefly.transactions_api, accounts[acc_idx].id)
-    #         logger.success(f"Finished uploading {card.description}")
-    #     else:
-    #         logger.info(f"Card {card.description} has no transactions")
-    #
-    # logger.success("Finished uploading transactions from all cards")
+    acc_name, acc_idx = pick(
+        tuple(acc.attributes.name for acc in accounts), title="Select Account"
+    )
+
+    logger.success(f"Selected account: {acc_name}")
+
+    card: Card
+    for card in filter(lambda c: c.enabled, cards):
+        if card.transactions:
+            logger.info(f"Uploading transactions for {card.description}")
+            upload_card(card, firefly, accounts[acc_idx].id)
+            logger.success(f"Finished uploading {card.description}")
+        else:
+            logger.info(f"Card {card.description} has no transactions")
+
+    logger.success("Finished uploading transactions from all cards")
 
 
 if __name__ == "__main__":

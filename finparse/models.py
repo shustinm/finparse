@@ -26,6 +26,13 @@ class Transaction(BaseModel):
     def __str__(self):
         return f"{self.amount}{self.currency.value} -> {self.description} ({self.date})"
 
+    @property
+    def firefly_notes(self) -> dict:
+        d = {}
+        if self.category:
+            d["Reported Category"] = self.category
+        return d
+
 
 def str_transactions(transactions: list[Transaction]) -> str:
     ret = []
@@ -42,7 +49,7 @@ class Card(BaseModel):
 
     @property
     def description(self) -> str:
-        return f"{self.name} - {self.last_4_digits}{' (disabled)' if not self.enabled else ''}"
+        return f"{self.name} - {self.last_4_digits}"
 
     def __str__(self):
         return (
