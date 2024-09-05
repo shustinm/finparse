@@ -20,7 +20,7 @@ class Transaction(BaseModel):
     foreign_amount: str | None = None
     foreign_currency: Currency | None = None
     category: str | None = None
-    id: int | None = None
+    id: str | None = None
     notes: str | None = None
 
     def __str__(self):
