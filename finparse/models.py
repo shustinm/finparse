@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -58,4 +59,11 @@ class Card(BaseModel):
         )
 
 
-type CardExportParser = Callable[[Path], Iterable[Card]]
+class ReportParser(ABC):
+    @staticmethod
+    @abstractmethod
+    def parse_workbook(workbook_path: Path) -> Iterable[Card]: ...
+
+    @staticmethod
+    def get_category_translations() -> dict[str, str]:
+        return {}

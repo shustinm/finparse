@@ -1,6 +1,7 @@
 import inspect
 from datetime import datetime
 from pathlib import Path
+from typing import Type
 
 from firefly_iii_client import (
     TransactionSplitStore,
@@ -11,10 +12,10 @@ from firefly_iii_client import (
 from loguru import logger
 from pick import pick
 
-from cards.isracard import parse_workbook as parse_isracard_workbook
-from cards.cal import parse_workbook as parse_cal_workbook
+from cards.isracard import IsracardReportParser
+from cards.cal import CalReportParser
 from finparse.firefly import Firefly
-from finparse.models import Card, CardExportParser, Transaction
+from finparse.models import Card, Transaction, ReportParser
 from log import configure_log
 import xattr
 import typer
@@ -22,9 +23,9 @@ import typer
 app = typer.Typer()
 
 
-CARD_MODULE_MAPPING: dict[str, CardExportParser] = {
-    "isracard.co.il": parse_isracard_workbook,
-    "cal-online.co.il": parse_cal_workbook,
+CARD_MODULE_MAPPING: dict[str, Type[ReportParser]] = {
+    "isracard.co.il": IsracardReportParser,
+    "cal-online.co.il": CalReportParser,
 }
 
 
@@ -40,7 +41,7 @@ def get_download_url(
         return None
 
 
-def find_parser(path: Path) -> CardExportParser:
+def find_parser(path: Path) -> Type[ReportParser]:
     dl_url = get_download_url(path)
     for k, v in CARD_MODULE_MAPPING.items():
         if k in dl_url:
@@ -59,12 +60,17 @@ def generate_notes_str(**notes) -> str:
 
 
 def upload_transaction(
-    transaction: Transaction, card: Card, firefly: Firefly, account_id: str
+    transaction: Transaction,
+    card: Card,
+    firefly: Firefly,
+    parser: Type[ReportParser],
+    account_id: str,
 ):
     transaction_store = TransactionSplitStore(
         amount=transaction.amount,
         var_date=datetime.combine(transaction.date, datetime.min.time()),
         description=transaction.description,
+        category_name=parser.get_category_translations().get(transaction.category),
         currency_code=transaction.currency.name,
         external_id=transaction.id,
         foreign_amount=transaction.foreign_amount,
@@ -80,10 +86,12 @@ def upload_transaction(
     )
 
 
-def upload_card(card: Card, firefly: Firefly, account_id: str):
+def upload_card(
+    card: Card, firefly: Firefly, parser: Type[ReportParser], account_id: str
+):
     for transaction in card.transactions:
         logger.info(f"Transaction: {transaction}")
-        upload_transaction(transaction, card, firefly, account_id)
+        upload_transaction(transaction, card, firefly, parser, account_id)
 
 
 @app.command()
@@ -96,10 +104,10 @@ def upload(
         help="Firefly III API host",
     ),
 ):
-    parser: CardExportParser = find_parser(report_file)
+    parser = find_parser(report_file)
     card_company = Path(inspect.getfile(parser)).stem.capitalize()
     logger.success(f"Found appropriate parser: {card_company}")
-    cards = parser(report_file)
+    cards = parser.parse_workbook(report_file)
     logger.success(f"Done parsing cards in {report_file}, starting upload...")
 
     firefly = Firefly(firefly_host, token)
@@ -117,7 +125,12 @@ def upload(
     for card in filter(lambda c: c.enabled, cards):
         if card.transactions:
             logger.info(f"Uploading transactions for {card.description}")
-            upload_card(card, firefly, accounts[acc_idx].id)
+            upload_card(
+                card,
+                firefly,
+                parser,
+                accounts[acc_idx].id,
+            )
             logger.success(f"Finished uploading {card.description}")
         else:
             logger.info(f"Card {card.description} has no transactions")

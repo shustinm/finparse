@@ -63,19 +63,19 @@ class Categories:
         self.by_id: dict[str, Category] = {}
         self.id_by_name: dict[str, str] = {}
 
-        self.categories_api = categories_api
+        self._categories_api = categories_api
 
-        for firefly_category in self.categories_api.list_category().data:
+        for firefly_category in self._categories_api.list_category().data:
             self[firefly_category.id] = Category(
                 id=firefly_category.id, name=firefly_category.attributes.name
             )
         logger.success(f"Found categories: {list(self.id_by_name.keys())}")
 
-        self.rule_groups_api = rule_group_api
+        self._rule_groups_api = rule_group_api
         self._init_rule_group()
 
     def _init_rule_group(self):
-        rule_groups = self.rule_groups_api.list_rule_group()
+        rule_groups = self._rule_groups_api.list_rule_group()
 
         required_rule_groups = set(rule_group for rule_group in CategoryRuleType)
 
@@ -88,13 +88,13 @@ class Categories:
 
             logger.info(f"Found rule group {category_rule_type.value!r}")
 
-            for rule in self.rule_groups_api.list_rule_by_group(rg.id).data:
+            for rule in self._rule_groups_api.list_rule_by_group(rg.id).data:
                 rule_category = rule.attributes.actions[0].value
                 self[rule_category].add_rule(category_rule_type, rule)
 
         logger.info(f"Creating rule groups: {required_rule_groups}")
         for rg in required_rule_groups:
-            self.rule_groups_api.store_rule_group(
+            self._rule_groups_api.store_rule_group(
                 RuleGroupStore(
                     active=True,
                     title=rg.value,
