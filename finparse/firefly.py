@@ -1,9 +1,11 @@
 from enum import Enum
-from typing import Self
+from pprint import pformat
+from typing import Self, TypeVar, Protocol, Iterable, Callable, Any
 
 from firefly_iii_client import (
     RuleGroupStore,
     RuleRead,
+    Meta,
 )
 from loguru import logger
 import firefly_iii_client as firefly3
@@ -54,7 +56,6 @@ class Category(BaseModel):
 
 
 class Categories:
-
     def __init__(
         self,
         categories_api: firefly3.CategoriesApi,
@@ -146,3 +147,23 @@ class Firefly:
         logger.success(f"Loaded {len(self.categories)} categories")
 
         self.rules_api = firefly3.RulesApi(self.client)
+
+
+T = TypeVar("T")
+
+
+class PaginatedObject(Protocol[T]):
+    data: list[T]
+    meta: Meta
+
+
+def paginate(f: Callable[..., PaginatedObject[T]], *args, **kwargs) -> Iterable[T]:
+    while True:
+        res = f(*args, **kwargs)
+        logger.debug(f"Paginating ({pformat(res.meta)})")
+        yield from res.data
+
+        if res.meta.pagination.current_page < res.meta.pagination.total_pages:
+            kwargs["page"] = kwargs.get("page", 1) + 1
+        else:
+            break

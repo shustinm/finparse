@@ -16,12 +16,18 @@ Each transaction is uploaded to Firefly III with the relevant extracted data
 
 ## Code Style Guidelines
 - **Formatter**: black
+- **Type Hints**: Use type hints consistently, especially for function parameters and return values
+- **Docstrings**: Add docstrings to functions and classes explaining their purpose
 
 ## Documentation Requirements
 - **Code Comments**: Don't document obvious stuff
 
 ## Testing Guidelines
 - **Test Framework**: pytest
+- **Fixtures**: Use pytest fixtures for setup and teardown
+- **Environment Variables**: Use pydantic_settings for environment variable management
+- **Test Organization**: Group related tests in test files by functionality
+- **Test Documentation**: Add docstrings to test functions explaining what they test
 
 ## Error Handling
 - **Logging**: If code isn't debuggable via logging, it's impossible to investigate production bugs. Logs are embraced
@@ -33,3 +39,9 @@ Each transaction is uploaded to Firefly III with the relevant extracted data
 - **Code Review Process**: Keep it simple!
 - **Refactoring Guidelines**: The project is small, so refactor at will
 - **Technical Debt**: Avoid technical debt. Refactor and delete with bravery
+
+## Environment Variable Guidelines
+- **Configuration**: Use pydantic_settings for type-safe environment variable handling
+- **Prefixing**: Use FINPARSE_ prefix for all environment variables
+- **Defaults**: Provide sensible defaults where possible
+- **Documentation**: Document required environment variables in README

@@ -62,7 +62,8 @@ class Card(BaseModel):
 class ReportParser(ABC):
     @staticmethod
     @abstractmethod
-    def parse_workbook(workbook_path: Path) -> Iterable[Card]: ...
+    def parse_workbook(workbook_path: Path) -> Iterable[Card]:
+        ...
 
     @staticmethod
     def get_category_translations() -> dict[str, str]:

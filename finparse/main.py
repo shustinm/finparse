@@ -12,11 +12,11 @@ from firefly_iii_client import (
 from loguru import logger
 from pick import pick
 
-from cards.isracard import IsracardReportParser
-from cards.cal import CalReportParser
-from finparse.firefly import Firefly
+from finparse.cards.isracard import IsracardReportParser
+from finparse.cards.cal import CalReportParser
+from finparse.firefly import Firefly, paginate
 from finparse.models import Card, Transaction, ReportParser
-from log import configure_log
+from finparse.log import configure_log
 import xattr
 import typer
 
@@ -117,7 +117,9 @@ def upload(
 
     firefly = Firefly(firefly_host, token)
 
-    accounts = firefly.accounts_api.list_account(type=AccountTypeFilter.ASSET).data
+    accounts = list(
+        paginate(firefly.accounts_api.list_account, type=AccountTypeFilter.ASSET)
+    )
     logger.info(f"Detected {len(accounts)} asset accounts")
 
     acc_name, acc_idx = pick(
