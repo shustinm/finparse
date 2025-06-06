@@ -1,29 +1,28 @@
 import inspect
 from datetime import datetime
 from pathlib import Path
-from typing import Type
 
+import typer
+import xattr
 from firefly_iii_client import (
-    TransactionSplitStore,
-    TransactionTypeProperty,
     AccountTypeFilter,
+    TransactionSplitStore,
     TransactionStore,
+    TransactionTypeProperty,
 )
 from loguru import logger
 from pick import pick
 
-from finparse.cards.isracard import IsracardReportParser
 from finparse.cards.cal import CalReportParser
+from finparse.cards.isracard import IsracardReportParser
 from finparse.firefly import Firefly, paginate
-from finparse.models import Card, Transaction, ReportParser
 from finparse.log import configure_log
-import xattr
-import typer
+from finparse.models import Card, ReportParser, Transaction
 
 app = typer.Typer()
 
 
-CARD_MODULE_MAPPING: dict[str, Type[ReportParser]] = {
+CARD_MODULE_MAPPING: dict[str, type[ReportParser]] = {
     "isracard.co.il": IsracardReportParser,
     "cal-online.co.il": CalReportParser,
 }
@@ -41,7 +40,7 @@ def get_download_url(
         return None
 
 
-def find_parser(path: Path) -> Type[ReportParser]:
+def find_parser(path: Path) -> type[ReportParser]:
     """
     Find the appropriate parser for the given report file.
 
@@ -68,7 +67,7 @@ def upload_transaction(
     transaction: Transaction,
     card: Card,
     firefly: Firefly,
-    parser: Type[ReportParser],
+    parser: type[ReportParser],
     account_id: str,
 ):
     transaction_store = TransactionSplitStore(
@@ -92,7 +91,7 @@ def upload_transaction(
 
 
 def upload_card(
-    card: Card, firefly: Firefly, parser: Type[ReportParser], account_id: str
+    card: Card, firefly: Firefly, parser: type[ReportParser], account_id: str
 ):
     for transaction in card.transactions:
         logger.info(f"Transaction: {transaction}")

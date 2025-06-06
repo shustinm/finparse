@@ -1,9 +1,9 @@
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
 from firefly_iii_client import AccountTypeFilter
-from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
 
 from finparse.firefly import Firefly, paginate
 
@@ -45,4 +45,4 @@ def test_paginate_accounts(firefly: Firefly):
         assert hasattr(account, "attributes")
         assert hasattr(account.attributes, "name")
         assert hasattr(account.attributes, "type")
-        assert account.attributes.type == "asset" 
+        assert account.attributes.type == "asset"

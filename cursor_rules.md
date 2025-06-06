@@ -16,8 +16,20 @@ Each transaction is uploaded to Firefly III with the relevant extracted data
 
 ## Code Style Guidelines
 - **Formatter**: black
+- **Linter**: ruff
+- **Auto-formatting**: Configured to run on save in Cursor
 - **Type Hints**: Use type hints consistently, especially for function parameters and return values
 - **Docstrings**: Add docstrings to functions and classes explaining their purpose
+
+## Development Environment
+- **Editor**: Cursor
+- **Auto-formatting**: 
+  - Configured in `.vscode/settings.json`
+  - Runs on save
+  - Uses Ruff for formatting and linting
+  - Uses Black for code style
+- **Python Version**: 3.12
+- **Package Manager**: uv
 
 ## Documentation Requirements
 - **Code Comments**: Don't document obvious stuff

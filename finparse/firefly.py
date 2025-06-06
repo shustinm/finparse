@@ -1,14 +1,15 @@
+from collections.abc import Callable, Iterable
 from enum import Enum
 from pprint import pformat
-from typing import Self, TypeVar, Protocol, Iterable, Callable
+from typing import Protocol, Self, TypeVar
 
+import firefly_iii_client as firefly3
 from firefly_iii_client import (
+    Meta,
     RuleGroupStore,
     RuleRead,
-    Meta,
 )
 from loguru import logger
-import firefly_iii_client as firefly3
 from pydantic import BaseModel
 
 
@@ -78,7 +79,7 @@ class Categories:
     def _init_rule_group(self):
         rule_groups = self._rule_groups_api.list_rule_group()
 
-        required_rule_groups = set(rule_group for rule_group in CategoryRuleType)
+        required_rule_groups = set(CategoryRuleType)
 
         for rg in rule_groups.data:
             try:
@@ -113,7 +114,7 @@ class Categories:
         self.by_id[value.id] = value
 
     def __iter__(self):
-        yield from zip(self.id_by_name, self.by_id.values())
+        yield from zip(self.id_by_name, self.by_id.values(), strict=False)
 
     def __len__(self):
         return len(self.by_id)

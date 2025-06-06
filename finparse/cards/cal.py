@@ -1,6 +1,5 @@
-from typing import Iterable
-
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 import openpyxl
@@ -8,7 +7,7 @@ from openpyxl.cell import Cell
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from finparse.models import Card, Transaction, Currency, ReportParser
+from finparse.models import Card, Currency, ReportParser, Transaction
 
 title_pattern = re.compile(r"לכרטיס\s(.*?)\sהמסתיים.*(\d{4})$")
 currency_pattern = re.compile(r"\[\$(.*?)]")

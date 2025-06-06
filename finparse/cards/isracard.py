@@ -1,13 +1,13 @@
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
-from finparse.models import Transaction, Card, ReportParser
-
-from loguru import logger
 import xlrd
-from xlrd.sheet import Sheet
+from loguru import logger
 from xlrd.book import Book
+from xlrd.sheet import Sheet
+
+from finparse.models import Card, ReportParser, Transaction
 
 
 def _iter_transactions(sheet: Sheet, start_row: int) -> Iterable[tuple[list, int]]:
@@ -29,10 +29,10 @@ def _iter_transactions(sheet: Sheet, start_row: int) -> Iterable[tuple[list, int
 def parse_local_transactions(
     sheet: Sheet, starting_idx: int
 ) -> tuple[list[Transaction], int]:
-    row_idx = starting_idx
+    _row_idx = starting_idx
     transactions = []
 
-    for row, row_idx in _iter_transactions(sheet, row_idx):
+    for row, _row_idx in _iter_transactions(sheet, _row_idx):  # noqa: B020
         (
             _date,
             business,
@@ -42,7 +42,7 @@ def parse_local_transactions(
             debit_currency,
             _id,
             notes,
-        ) = list(map(lambda c: c.value, row))
+        ) = [c.value for c in row]
 
         transactions.append(
             Transaction(
@@ -57,14 +57,14 @@ def parse_local_transactions(
             )
         )
 
-    return transactions, row_idx + 1
+    return transactions, _row_idx + 1
 
 
 def parse_foreign_transactions(sheet: Sheet, start_row: int):
-    row_idx = start_row
+    _row_idx = start_row
     transactions = []
 
-    for row, row_idx in _iter_transactions(sheet, row_idx):
+    for row, _row_idx in _iter_transactions(sheet, _row_idx):  # noqa: B020
         (
             _date,
             _,
@@ -74,7 +74,7 @@ def parse_foreign_transactions(sheet: Sheet, start_row: int):
             amount,
             currency,
             _,
-        ) = list(map(lambda c: c.value, row))
+        ) = [c.value for c in row]
 
         transactions.append(
             Transaction(
@@ -87,7 +87,7 @@ def parse_foreign_transactions(sheet: Sheet, start_row: int):
             )
         )
 
-    return transactions, row_idx + 1
+    return transactions, _row_idx + 1
 
 
 def parse_card(sheet: Sheet, starting_idx: int) -> tuple[Card, int]:
