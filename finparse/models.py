@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Iterable
 
 from pydantic import BaseModel
 

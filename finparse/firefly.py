@@ -1,6 +1,6 @@
 from enum import Enum
 from pprint import pformat
-from typing import Self, TypeVar, Protocol, Iterable, Callable, Any
+from typing import Self, TypeVar, Protocol, Iterable, Callable
 
 from firefly_iii_client import (
     RuleGroupStore,
