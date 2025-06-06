@@ -2,7 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from finparse.cards import isracard, cal
+from finparse.cards.isracard import IsracardReportParser
+from finparse.cards.cal import CalReportParser
 
 FILES_PATH = Path(__file__).parent / "files"
 
@@ -26,7 +27,8 @@ CAL_EXPECTED_TRANSACTIONS = {
     [(k, v) for k, v in ISRACARD_EXPECTED_TRANSACTIONS.items()],
 )
 def test_isracard_parser(workbook_path: Path, expected_transactions: int):
-    cards = isracard.parse_workbook(workbook_path)
+    parser = IsracardReportParser()
+    cards = parser.parse_workbook(workbook_path)
     assert sum(len(c.transactions) for c in cards) == expected_transactions
 
 
@@ -35,5 +37,6 @@ def test_isracard_parser(workbook_path: Path, expected_transactions: int):
     [(k, v) for k, v in CAL_EXPECTED_TRANSACTIONS.items()],
 )
 def test_cal_parser(workbook_path: Path, expected_transactions: int):
-    cards = cal.parse_workbook(workbook_path)
+    parser = CalReportParser()
+    cards = parser.parse_workbook(workbook_path)
     assert sum(len(c.transactions) for c in cards) == expected_transactions

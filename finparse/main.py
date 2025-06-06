@@ -42,6 +42,11 @@ def get_download_url(
 
 
 def find_parser(path: Path) -> Type[ReportParser]:
+    """
+    Find the appropriate parser for the given report file.
+
+    NOTE: Currently only works on MacOS, since implementation of get_download_url is MacOS-specific
+    """
     dl_url = get_download_url(path)
     for k, v in CARD_MODULE_MAPPING.items():
         if k in dl_url:
