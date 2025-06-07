@@ -98,24 +98,8 @@ def upload_card(
         upload_transaction(transaction, card, firefly, parser, account_id)
 
 
-@app.command()
-def upload(
-    report_file: Path = typer.Argument(help="Credit card monthly report"),
-    token: str = typer.Option(envvar="FINPARSE_TOKEN", help="Firefly III API token"),
-    firefly_host: str = typer.Option(
-        "http://localhost/api",
-        envvar="FINPARSE_FIREFLY_HOST",
-        help="Firefly III API host",
-    ),
-):
-    parser = find_parser(report_file)
-    card_company = Path(inspect.getfile(parser)).stem.capitalize()
-    logger.success(f"Found appropriate parser: {card_company}")
-    cards = parser.parse_workbook(report_file)
-    logger.success(f"Done parsing cards in {report_file}, starting upload...")
-
-    firefly = Firefly(firefly_host, token)
-
+def select_account(firefly: Firefly) -> tuple[str, str]:
+    """Select an account from Firefly III and return its name and ID."""
     accounts = list(
         paginate(firefly.accounts_api.list_account, type=AccountTypeFilter.ASSET)
     )
@@ -124,24 +108,47 @@ def upload(
     acc_name, acc_idx = pick(
         tuple(acc.attributes.name for acc in accounts), title="Select Account"
     )
-
     logger.success(f"Selected account: {acc_name}")
+    return acc_name, accounts[acc_idx].id
 
-    card: Card
+
+def process_report_file(report_file: Path, firefly: Firefly, account_id: str) -> None:
+    """Process a single report file and upload its transactions."""
+    parser = find_parser(report_file)
+    card_company = Path(inspect.getfile(parser)).stem.capitalize()
+    logger.success(f"Found appropriate parser: {card_company} for {report_file}")
+
+    cards = parser.parse_workbook(report_file)
+    logger.success(f"Done parsing cards in {report_file}, starting upload...")
+
     for card in filter(lambda c: c.enabled, cards):
         if card.transactions:
             logger.info(f"Uploading transactions for {card.description}")
-            upload_card(
-                card,
-                firefly,
-                parser,
-                accounts[acc_idx].id,
-            )
+            upload_card(card, firefly, parser, account_id)
             logger.success(f"Finished uploading {card.description}")
         else:
             logger.info(f"Card {card.description} has no transactions")
 
-    logger.success("Finished uploading transactions from all cards")
+    logger.success(f"Finished uploading transactions from {report_file}")
+
+
+@app.command()
+def upload(
+    report_files: list[Path] = typer.Argument(help="Credit card monthly report(s)"),
+    token: str = typer.Option(envvar="FINPARSE_TOKEN", help="Firefly III API token"),
+    firefly_host: str = typer.Option(
+        "http://localhost/api",
+        envvar="FINPARSE_FIREFLY_HOST",
+        help="Firefly III API host",
+    ),
+):
+    firefly = Firefly(firefly_host, token)
+    _, account_id = select_account(firefly)
+
+    for report_file in report_files:
+        process_report_file(report_file, firefly, account_id)
+
+    logger.success("Finished uploading transactions from all files")
 
 
 if __name__ == "__main__":
