@@ -42,7 +42,7 @@ def parse_local_transactions(
             debit_currency,
             _id,
             notes,
-        ) = [c.value for c in row]
+        ) = (c.value for c in row)
 
         transactions.append(
             Transaction(
@@ -74,7 +74,7 @@ def parse_foreign_transactions(sheet: Sheet, start_row: int):
             amount,
             currency,
             _,
-        ) = [c.value for c in row]
+        ) = (c.value for c in row)
 
         transactions.append(
             Transaction(

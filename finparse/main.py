@@ -137,12 +137,13 @@ def upload(
     report_files: list[Path] = typer.Argument(help="Credit card monthly report(s)"),
     token: str = typer.Option(envvar="FINPARSE_TOKEN", help="Firefly III API token"),
     firefly_host: str = typer.Option(
-        "http://localhost/api",
+        "http://localhost",
         envvar="FINPARSE_FIREFLY_HOST",
         help="Firefly III API host",
     ),
 ):
-    firefly = Firefly(firefly_host, token)
+    # Remove trailing slash if present and append /api
+    firefly = Firefly(f"{firefly_host.rstrip('/')}/api", token)
     _, account_id = select_account(firefly)
 
     for report_file in report_files:

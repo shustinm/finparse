@@ -10,7 +10,7 @@ from finparse.firefly import Firefly, paginate
 
 class FireflySettings(BaseSettings):
     token: str
-    host: str = "http://localhost/api"
+    host: str = "http://localhost"
 
     model_config = ConfigDict(env_prefix="FINPARSE_")
 
@@ -27,14 +27,17 @@ def firefly(firefly_settings: FireflySettings) -> Generator[Firefly, None, None]
     if not firefly_settings.token:
         pytest.skip("FINPARSE_TOKEN environment variable not set")
 
-    client = Firefly(firefly_settings.host, firefly_settings.token)
+    # Remove trailing slash if present and append /api
+    client = Firefly(f"{firefly_settings.host.rstrip('/')}/api", firefly_settings.token)
     yield client
 
 
 def test_paginate_accounts(firefly: Firefly):
     """Test that pagination correctly fetches all asset accounts."""
     # Test pagination of accounts
-    accounts = list(paginate(firefly.accounts_api.list_account, type=AccountTypeFilter.ASSET))
+    accounts = list(
+        paginate(firefly.accounts_api.list_account, type=AccountTypeFilter.ASSET)
+    )
 
     # Verify we got some accounts
     assert len(accounts) > 0
