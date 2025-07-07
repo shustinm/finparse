@@ -15,9 +15,10 @@ from pick import pick
 
 from finparse.cards.cal import CalReportParser
 from finparse.cards.isracard import IsracardReportParser
-from finparse.firefly import Firefly, paginate
+from finparse.firefly import Firefly, paginate, FireflyConnectionError
 from finparse.log import configure_log
 from finparse.models import Card, ReportParser, Transaction
+from finparse.categorizer import Categorizer, CategorizationResult
 
 app = typer.Typer()
 
@@ -142,14 +143,88 @@ def upload(
         help="Firefly III API host",
     ),
 ):
-    # Remove trailing slash if present and append /api
-    firefly = Firefly(f"{firefly_host.rstrip('/')}/api", token)
+    try:
+        firefly = Firefly(f"{firefly_host.rstrip('/')}/api", token)
+    except FireflyConnectionError as e:
+        typer.secho(str(e), fg=typer.colors.RED)
+        raise typer.Exit(1)
+
     _, account_id = select_account(firefly)
 
     for report_file in report_files:
         process_report_file(report_file, firefly, account_id)
 
     logger.success("Finished uploading transactions from all files")
+
+
+@app.command()
+def categorize(
+    token: str = typer.Option(envvar="FINPARSE_TOKEN", help="Firefly III API token"),
+    firefly_host: str = typer.Option(
+        "http://localhost",
+        envvar="FINPARSE_FIREFLY_HOST",
+        help="Firefly III API host",
+    ),
+):
+    """Categorize uncategorized transactions using AI-generated rules."""
+    try:
+        firefly = Firefly(f"{firefly_host.rstrip('/')}/api", token)
+    except FireflyConnectionError as e:
+        typer.secho(str(e), fg=typer.colors.RED)
+        raise typer.Exit(1)
+
+    # Get all transactions
+    transactions = list(
+        paginate(
+            firefly.transactions_api.list_transaction,
+        )
+    )
+
+    # Filter for uncategorized transactions
+    uncategorized = [
+        t for t in transactions if not t.attributes.transactions[0].category_id
+    ]
+
+    if not uncategorized:
+        logger.info("No uncategorized transactions found")
+        return
+
+    logger.info(f"Found {len(uncategorized)} uncategorized transactions")
+
+    # Group transactions by merchant name
+    merchant_transactions: dict[str, list] = {}
+    for transaction in uncategorized:
+        description = transaction.attributes.transactions[0].description
+        if description not in merchant_transactions:
+            merchant_transactions[description] = []
+        merchant_transactions[description].append(transaction)
+
+    logger.info(f"Found {len(merchant_transactions)} unique merchants")
+
+    # TODO: Initialize categorizer based on configuration
+    categorizer: Categorizer = None  # type: ignore
+
+    # Process each merchant
+    for merchant_name, transactions in merchant_transactions.items():
+        logger.info(f"Processing merchant: {merchant_name}")
+        try:
+            result = categorizer.categorize_merchant(merchant_name)
+
+            # Only create rules for high confidence matches
+            if result.confidence > 0.7:
+                rule = categorizer.create_rule(result)
+                firefly.rules_api.store_rule(rule)
+                logger.success(
+                    f"Created rule for {merchant_name} -> {result.category_name} "
+                    f"(confidence: {result.confidence:.2f})"
+                )
+            else:
+                logger.warning(
+                    f"Low confidence categorization for {merchant_name}: "
+                    f"{result.category_name} ({result.confidence:.2f})"
+                )
+        except Exception as e:
+            logger.error(f"Error processing {merchant_name}: {e}")
 
 
 if __name__ == "__main__":

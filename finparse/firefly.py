@@ -1,7 +1,7 @@
 from collections.abc import Callable, Iterable
 from enum import Enum
 from pprint import pformat
-from typing import Protocol, Self, TypeVar
+from typing import Protocol, Self, TypeVar, Annotated
 
 import firefly_iii_client as firefly3
 from firefly_iii_client import (
@@ -11,6 +11,8 @@ from firefly_iii_client import (
 )
 from loguru import logger
 from pydantic import BaseModel
+from urllib3.exceptions import MaxRetryError, NewConnectionError
+from requests.exceptions import ConnectionError as RequestsConnectionError
 
 
 class CategoryRule(BaseModel):
@@ -123,6 +125,19 @@ class Categories:
         return item in self.id_by_name
 
 
+class FireflyConnectionError(Exception):
+    """Raised when there are issues connecting to Firefly III."""
+
+    def __init__(self, host: str, original_error: Exception):
+        self.host = host
+        self.original_error = original_error
+        super().__init__(
+            f"Failed to connect to Firefly III at {host}. "
+            f"Please check that the server is running and the host is correct.\n"
+            f"Original error: {original_error}"
+        )
+
+
 class Firefly:
     def __init__(self, firefly_host: str, token: str):
         configuration = firefly3.configuration.Configuration(
@@ -130,13 +145,16 @@ class Firefly:
         )
         self.client = firefly3.ApiClient(configuration)
 
-        about = firefly3.AboutApi(self.client).get_about()
-        logger.success(
-            f"Connected to Firefly III at {self.client.configuration.host.removesuffix('/api')}"
-        )
-        logger.info(
-            f"Detected Firefly III version: {about.data.version} (API version: {about.data.api_version})"
-        )
+        try:
+            about = firefly3.AboutApi(self.client).get_about()
+            logger.success(
+                f"Connected to Firefly III at {self.client.configuration.host.removesuffix('/api')}"
+            )
+            logger.info(
+                f"Detected Firefly III version: {about.data.version} (API version: {about.data.api_version})"
+            )
+        except (MaxRetryError, NewConnectionError, RequestsConnectionError) as e:
+            raise FireflyConnectionError(firefly_host, e) from e
 
         self.accounts_api = firefly3.AccountsApi(self.client)
         self.transactions_api = firefly3.TransactionsApi(self.client)
