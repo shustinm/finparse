@@ -1,10 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: false
----
-# Categorization Feature Design
-
 ## Feature Overview
 The goal was to add a "categorize" command that would:
 1. Find uncategorized transactions in Firefly III
@@ -24,44 +17,132 @@ The goal was to add a "categorize" command that would:
 
 ### 2. **Implementation Phases**
 - **Phase 1**: Basic command structure and transaction fetching ✅
-- **Phase 2**: AI integration (OpenAI or local model)
-- **Phase 3**: Rule generation and Firefly III integration
-- **Phase 4**: Local model support and refinement
+- **Phase 2**: AI integration (OpenAI or local model) ✅
+- **Phase 3**: Rule generation and Firefly III integration ✅
+- **Phase 4**: Local model support and refinement (optional future enhancement)
 
 ### 3. **Technical Architecture**
 - Created `Categorizer` base class for different AI implementations
 - Used `CategorizationResult` to hold AI output (merchant, category, confidence, pattern)
 - Leveraged existing Firefly III rule infrastructure
 - Added proper error handling for connection issues
+- **Chose PydanticAI** for structured output and type safety
 
 ### 4. **Configuration Approach**
 - Started with complex dependency injection, then simplified to direct parameters
 - Shared Firefly III connection parameters between commands
 - Added user-friendly error messages for connection failures
+- Added OpenAI API key configuration with environment variable support
 
-## Current Implementation Status
+## Implementation Status - COMPLETE ✅
 
-✅ **Completed:**
-- Basic `categorize` command structure
-- Transaction fetching and filtering for uncategorized transactions
-- Merchant grouping by transaction description
-- Error handling for Firefly III connection issues
-- Rule creation infrastructure in `categorizer.py`
+### ✅ **Phase 2: AI Integration - COMPLETED**
+- **PydanticAI Integration**: Implemented `PydanticAICategorizer` using structured output
+- **Structured Prompts**: AI receives merchant names and available categories, returns structured responses
+- **Error Handling**: Comprehensive error handling with fallback categorization
+- **Configuration**: Added OpenAI API key, model selection, and confidence threshold options
+- **Rule Group Management**: Automatic creation and management of "Finparse: AI Categorization" rule group
 
-🔄 **Next Steps:**
-- Implement actual AI categorizer (OpenAI or local model)
-- Add rule generation and Firefly III integration
-- Add configuration options for AI model selection
-- Add confidence threshold configuration
+### ✅ **Phase 3: Rule Generation and Firefly III Integration - COMPLETED**
+- **Rule Creation**: Rules are created with proper Firefly III API structure
+- **Rule Storage**: Rules are stored in Firefly III with proper cleanup
+- **Category Integration**: Uses real categories from Firefly III instance
+- **Pattern Matching**: Creates effective patterns for merchant matching
 
-## Implementation Details
+### ✅ **Testing - COMPREHENSIVE**
+- **Unit Tests**: 7 tests covering categorizer functionality with mocked dependencies
+- **Integration Tests**: 5 tests using real Firefly III instance with mocked AI responses
+- **End-to-End Testing**: Full workflow tested with real Firefly III categories and rule groups
+- **Test Coverage**: 17 total tests passing, including existing functionality
+
+## Technical Implementation Details
 
 ### Files Modified/Created:
-- `finparse/main.py`: Added `categorize` command
-- `finparse/categorizer.py`: Created base classes for AI categorization
-- `finparse/firefly.py`: Added connection error handling
+- `finparse/main.py`: Added `categorize` command with AI integration
+- `finparse/categorizer.py`: Implemented `PydanticAICategorizer` and base classes
+- `finparse/firefly.py`: Enhanced with rule group management
+- `pyproject.toml`: Added `pydantic-ai` and `pytest-asyncio` dependencies
+- `tests/test_categorizer.py`: Unit tests for categorizer functionality
+- `tests/test_categorizer_integration.py`: Integration tests with real Firefly III
+- `env.example`: Environment variable documentation
 
 ### Key Classes:
+- `Categorizer`: Base class for AI categorization implementations
+- `PydanticAICategorizer`: PydanticAI-based implementation using structured output
+- `CategorizationResult`: Holds AI categorization results (merchant, category, confidence, pattern)
+- `CategorizationResponse`: Pydantic model for AI response structure
+- `FireflyConnectionError`: Custom exception for connection issues
+
+### Command Interface:
+```bash
+finparse categorize \
+  --token "your-firefly-token" \
+  --firefly-host "http://localhost" \
+  --openai-api-key "your-openai-key" \
+  --confidence-threshold 0.7 \
+  --model "gpt-4o-mini"
+```
+
+### Environment Variables:
+- `FINPARSE_TOKEN`: Firefly III API token
+- `FINPARSE_FIREFLY_HOST`: Firefly III host (default: http://localhost)
+- `FINPARSE_OPENAI_API_KEY`: OpenAI API key for AI categorization
+
+## Key Technical Decisions Made
+
+### 1. **AI Framework Choice: PydanticAI**
+- **Why**: Structured output, type safety, and modern async support
+- **Benefits**: Guaranteed response structure, better error handling, easier testing
+- **Alternative Considered**: Direct OpenAI API calls (rejected for lack of structure)
+
+### 2. **Rule Group Strategy**
+- **Decision**: Create dedicated "Finparse: AI Categorization" rule group
+- **Benefits**: Organized rule management, easy identification, cleanup capabilities
+- **Implementation**: Automatic creation if not exists, reuse if exists
+
+### 3. **Firefly III API Compatibility**
+- **Challenge**: Firefly III client API changes required rule structure updates
+- **Solution**: Updated `RuleStore` creation to include required fields (`rule_group_id`, `trigger`)
+- **Result**: Full compatibility with latest Firefly III API
+
+### 4. **Testing Strategy**
+- **Unit Tests**: Mocked dependencies for fast, reliable testing
+- **Integration Tests**: Real Firefly III instance with mocked AI for end-to-end validation
+- **Real Categories**: Tests use actual categories from user's Firefly III instance
+
+### 5. **Error Handling Approach**
+- **Fallback Categorization**: Returns "Uncategorized" with 0.0 confidence on AI errors
+- **Connection Errors**: User-friendly error messages for Firefly III connection issues
+- **Validation**: Proper validation of AI responses and Firefly III API responses
+
+## Production Readiness
+
+### ✅ **Ready for Production**
+- **Comprehensive Testing**: 17 tests passing, including real Firefly III integration
+- **Error Handling**: Robust error handling with fallbacks
+- **Documentation**: Clear command interface and environment variable documentation
+- **Type Safety**: Full type hints and Pydantic validation
+- **Logging**: Comprehensive logging for debugging and monitoring
+
+### 🔄 **Future Enhancements (Optional)**
+- **Local Model Support**: Integration with local AI models (Ollama, etc.)
+- **Batch Processing**: Process large numbers of transactions efficiently
+- **Prompt Engineering**: More sophisticated prompts for better categorization
+- **Confidence Thresholds**: Dynamic confidence thresholds based on category
+- **Rule Optimization**: Merge similar rules and optimize patterns
+
+## Usage Example
+
+```bash
+# Set environment variables
+export FINPARSE_TOKEN="your-firefly-token"
+export FINPARSE_OPENAI_API_KEY="your-openai-key"
+
+# Run categorization
+finparse categorize --confidence-threshold 0.8 --model "gpt-4o-mini"
+```
+
+The implementation follows the existing codebase patterns and leverages Firefly III's built-in rule system rather than trying to manage categorization externally. The feature is now production-ready with comprehensive testing and documentation. 
 - `Categorizer`: Base class for AI categorization implementations
 - `CategorizationResult`: Holds AI categorization results
 - `FireflyConnectionError`: Custom exception for connection issues

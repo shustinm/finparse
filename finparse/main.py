@@ -18,7 +18,7 @@ from finparse.cards.isracard import IsracardReportParser
 from finparse.firefly import Firefly, paginate, FireflyConnectionError
 from finparse.log import configure_log
 from finparse.models import Card, ReportParser, Transaction
-from finparse.categorizer import Categorizer, CategorizationResult
+from finparse.categorizer import Categorizer, CategorizationResult, PydanticAICategorizer
 
 app = typer.Typer()
 
@@ -165,6 +165,15 @@ def categorize(
         envvar="FINPARSE_FIREFLY_HOST",
         help="Firefly III API host",
     ),
+    openai_api_key: str = typer.Option(
+        envvar="FINPARSE_OPENAI_API_KEY", help="OpenAI API key"
+    ),
+    confidence_threshold: float = typer.Option(
+        0.7, help="Minimum confidence threshold for rule creation"
+    ),
+    model: str = typer.Option(
+        "gpt-4o-mini", help="OpenAI model to use for categorization"
+    ),
 ):
     """Categorize uncategorized transactions using AI-generated rules."""
     try:
@@ -201,30 +210,62 @@ def categorize(
 
     logger.info(f"Found {len(merchant_transactions)} unique merchants")
 
-    # TODO: Initialize categorizer based on configuration
-    categorizer: Categorizer = None  # type: ignore
+    # Initialize PydanticAI categorizer
+    categorizer = PydanticAICategorizer(api_key=openai_api_key, model=model)
+
+    # Get available categories from Firefly III
+    available_categories = list(firefly.categories.id_by_name)
+    categorizer.set_available_categories(available_categories)
+    logger.info(f"Loaded {len(available_categories)} available categories")
+
+    # Get or create the AI categorization rule group
+    ai_rule_group_id = None
+    rule_groups = firefly.rule_groups_api.list_rule_group()
+    for rg in rule_groups.data:
+        if rg.attributes.title == "Finparse: AI Categorization":
+            ai_rule_group_id = rg.id
+            logger.info("Found existing AI categorization rule group")
+            break
+
+    if not ai_rule_group_id:
+        from firefly_iii_client import RuleGroupStore
+
+        new_group = firefly.rule_groups_api.store_rule_group(
+            RuleGroupStore(
+                active=True,
+                title="Finparse: AI Categorization",
+            )
+        )
+        ai_rule_group_id = new_group.data.id
+        logger.info("Created new AI categorization rule group")
 
     # Process each merchant
-    for merchant_name, transactions in merchant_transactions.items():
-        logger.info(f"Processing merchant: {merchant_name}")
-        try:
-            result = categorizer.categorize_merchant(merchant_name)
+    import asyncio
 
-            # Only create rules for high confidence matches
-            if result.confidence > 0.7:
-                rule = categorizer.create_rule(result)
-                firefly.rules_api.store_rule(rule)
-                logger.success(
-                    f"Created rule for {merchant_name} -> {result.category_name} "
-                    f"(confidence: {result.confidence:.2f})"
-                )
-            else:
-                logger.warning(
-                    f"Low confidence categorization for {merchant_name}: "
-                    f"{result.category_name} ({result.confidence:.2f})"
-                )
-        except Exception as e:
-            logger.error(f"Error processing {merchant_name}: {e}")
+    async def process_merchants():
+        for merchant_name, transactions in merchant_transactions.items():
+            logger.info(f"Processing merchant: {merchant_name}")
+            try:
+                result = await categorizer.categorize_merchant(merchant_name)
+
+                # Only create rules for high confidence matches
+                if result.confidence > confidence_threshold:
+                    rule = categorizer.create_rule(result, ai_rule_group_id)
+                    firefly.rules_api.store_rule(rule)
+                    logger.success(
+                        f"Created rule for {merchant_name} -> {result.category_name} "
+                        f"(confidence: {result.confidence:.2f})"
+                    )
+                else:
+                    logger.warning(
+                        f"Low confidence categorization for {merchant_name}: "
+                        f"{result.category_name} ({result.confidence:.2f})"
+                    )
+            except Exception as e:
+                logger.error(f"Error processing {merchant_name}: {e}")
+
+    # Run the async categorization
+    asyncio.run(process_merchants())
 
 
 if __name__ == "__main__":
