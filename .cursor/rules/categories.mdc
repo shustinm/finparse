@@ -1,0 +1,69 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Categorization Feature Design
+
+## Feature Overview
+The goal was to add a "categorize" command that would:
+1. Find uncategorized transactions in Firefly III
+2. Use AI to categorize them and generate rules
+3. Add those rules to Firefly III's automation engine
+4. Support both local and cloud AI models
+5. Handle Hebrew text and Israeli merchants
+
+## Key Design Decisions
+
+### 1. **Rule Generation Strategy**
+- AI creates "rules" rather than directly categorizing transactions
+- Rules are added to Firefly III's automation engine
+- Rules use pattern matching on transaction descriptions (merchant names)
+- Each category gets its own rule with "stop processing" enabled
+- Rules are organized in a rule group for categorization
+
+### 2. **Implementation Phases**
+- **Phase 1**: Basic command structure and transaction fetching ✅
+- **Phase 2**: AI integration (OpenAI or local model)
+- **Phase 3**: Rule generation and Firefly III integration
+- **Phase 4**: Local model support and refinement
+
+### 3. **Technical Architecture**
+- Created `Categorizer` base class for different AI implementations
+- Used `CategorizationResult` to hold AI output (merchant, category, confidence, pattern)
+- Leveraged existing Firefly III rule infrastructure
+- Added proper error handling for connection issues
+
+### 4. **Configuration Approach**
+- Started with complex dependency injection, then simplified to direct parameters
+- Shared Firefly III connection parameters between commands
+- Added user-friendly error messages for connection failures
+
+## Current Implementation Status
+
+✅ **Completed:**
+- Basic `categorize` command structure
+- Transaction fetching and filtering for uncategorized transactions
+- Merchant grouping by transaction description
+- Error handling for Firefly III connection issues
+- Rule creation infrastructure in `categorizer.py`
+
+🔄 **Next Steps:**
+- Implement actual AI categorizer (OpenAI or local model)
+- Add rule generation and Firefly III integration
+- Add configuration options for AI model selection
+- Add confidence threshold configuration
+
+## Implementation Details
+
+### Files Modified/Created:
+- `finparse/main.py`: Added `categorize` command
+- `finparse/categorizer.py`: Created base classes for AI categorization
+- `finparse/firefly.py`: Added connection error handling
+
+### Key Classes:
+- `Categorizer`: Base class for AI categorization implementations
+- `CategorizationResult`: Holds AI categorization results
+- `FireflyConnectionError`: Custom exception for connection issues
+
+The implementation follows the existing codebase patterns and leverages Firefly III's built-in rule system rather than trying to manage categorization externally. 
